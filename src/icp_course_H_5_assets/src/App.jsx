@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { icp_course_H_5 } from "../../declarations/icp_course_H_5";
+import { Actor, HttpAgent } from "@dfinity/agent";
+import { icp_course_H_5, idlFactory, canisterId } from "../../declarations/icp_course_H_5";
 import { AuthClient } from "@dfinity/auth-client";
 
 let authClient;
+let http_agent;
+let webapp;
+
+const IIs_server_url = process.env.NODE_ENV === "production"? "https://identity.ic0.app/" : "http://localhost:8000/?canisterId=rkp4c-7iaaa-aaaaa-aaaca-cai";
 
 function type_to_text(t) {
     return Object.getOwnPropertyNames(t)[0]
@@ -30,6 +35,14 @@ function App() {
   const [canisters, setCanisters] = useState([]);
   const [canistersM, setCanistersM] = useState([]);
   const [principal, setPrincipal] = useState('');
+  const [logined, setLogined] = useState(false);
+
+  function handleLogoutClick() {
+    http_agent = null;
+    webapp = null;
+    setLogined(false);
+    setPrincipal('');
+  }  
 
   async function auth() {
     authClient = await AuthClient.create();
@@ -37,31 +50,32 @@ function App() {
 
   function handClick() {
     authClient.login({
-      identityProvider: "https://identity.ic0.app/",
+      identityProvider: IIs_server_url,
       onSuccess: () => {
         const identity = authClient.getIdentity();
+        http_agent = new HttpAgent({ identity });
+        webapp = Actor.createActor(idlFactory, {
+          http_agent,
+          canisterId: canisterId,
+        });
+
         setPrincipal(identity.getPrincipal().toText());
+        setLogined(true);
       }
     });
   }
 
-  async function getProposals() {
-    const proposals = await icp_course_H_5.get_proposals();
-    setProposals(proposals);
-    console.log(proposals);
-  }
-
-  async function getTeam() {
+  async function getData() {
     const team = await icp_course_H_5.get_owner_list();
     setTeam(team);
-    console.log(team);
-  }
+    // console.log(team);
 
-  async function getCanisters() {
+    const proposals = await icp_course_H_5.get_proposals();
+    setProposals(proposals);
+    // console.log(proposals);
+
     const canisters = await icp_course_H_5.get_owned_canisters_list();
-    
     let canistersM = new Array(canisters.length);
-
     for(var i = 0; i < canisters.length; i++) {
       canistersM[i] = await icp_course_H_5.get_permission(canisters[i]);
     }
@@ -69,21 +83,16 @@ function App() {
     setCanisters(canisters);
     setCanistersM(canistersM);
 
-    console.log(canisters);
-    console.log(canistersM);
+    // console.log(canisters);
+    // console.log(canistersM);
   }
 
   useEffect(() => {
     auth();
-
-    getProposals();
-    getTeam();
-    getCanisters();
+    getData();
 
     const interval = setInterval(() => {
-      getProposals();
-      getTeam();
-      getCanisters();
+      getData();
     }, 1000);
     return () => {
       clearInterval(interval);
@@ -93,17 +102,26 @@ function App() {
   return (
     <div style={{ "fontSize": "20px" }}>
       
-      <button type="button" className=".btn-primary" onClick={handClick}>登录</button>
-
-      <div style={{ "backgroundColor": "#AAB7B8", "fontSize": "30px" }}>
-        <p>已登录用户Principal：<b>{principal}</b></p>
+      <div>
+        
+        <div>
+        {logined
+          ? <button type="button" onClick={handleLogoutClick}>登出</button>
+          : <button type="button" className=".btn-primary" onClick={handClick}>IIs登录</button> 
+        }
+        已经登录？{logined? "是": "否"}
+        </div>
       </div>
 
-      <div style={{ "backgroundColor": "#e0b0ab", "fontSize": "30px" }}>
+      <div style={{ "backgroundColor": "#AAB7B8", "fontSize": "20px" }}>
+        <p><b>已登录用户Principal：{principal}</b></p>
+      </div>
+
+      <div style={{ "backgroundColor": "#e0b0ab", "fontSize": "20px" }}>
         <p><b>DAO controlled cycles wallets!</b></p>
       </div>
       
-      <div style={{ "backgroundColor": "#d0cb8c", "fontSize": "30px" }}>
+      <div style={{ "backgroundColor": "#d0cb8c", "fontSize": "20px" }}>
         <p><b>DAO Team Members</b></p>
       </div>
         <table className="table table-striped">
@@ -118,7 +136,7 @@ function App() {
           </tbody>
         </table>
 
-      <div style={{ "backgroundColor": "#8eee23", "fontSize": "30px" }}>
+      <div style={{ "backgroundColor": "#8eee23", "fontSize": "20px" }}>
         <p><b>Proposals List</b></p>
       </div>
       
@@ -173,7 +191,7 @@ function App() {
         </table>
         </div>
         
-        <div style={{ "backgroundColor": "#bdbdbd", "fontSize": "30px" }}>
+        <div style={{ "backgroundColor": "#bdbdbd", "fontSize": "20px" }}>
           <p><b>Installed Canisters List</b></p>
         </div>
 

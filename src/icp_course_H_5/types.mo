@@ -24,13 +24,18 @@ module {
 	public type ProposalType = {
 		#addPermission;
 		#removePermission;
+
 		#installCode;
 		#upgradeCode;
 		#uninstallCode;
+
 		#createCanister;
 		#startCanister;
 		#stopCanister;
 		#deleteCanister;
+
+		#addMember;
+		// #removeMember;
 	};
 
 	public func finish_proposer(p1: Proposal) : Proposal {
