@@ -7,7 +7,7 @@ identity default "./id1.pem";
 // import the default canister, need: dfx start --clean
 import canister = "rrkah-fqaaa-aaaaa-aaaaq-cai";
 
-let canister_id = principal "qoctq-giaaa-aaaaa-aaaea-cai";
+let canister_id = principal "qjdve-lqaaa-aaaaa-aaaeq-cai";
 
 //---------------INSTALL CODE---------------//
 
