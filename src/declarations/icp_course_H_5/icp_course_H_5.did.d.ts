@@ -22,6 +22,7 @@ export type ProposalType = { 'stopCanister' : null } |
   { 'installCode' : null } |
   { 'uninstallCode' : null } |
   { 'startCanister' : null } |
+  { 'addMember' : null } |
   { 'removePermission' : null } |
   { 'createCanister' : null } |
   { 'deleteCanister' : null };
@@ -31,6 +32,7 @@ export type ProposalType__1 = { 'stopCanister' : null } |
   { 'installCode' : null } |
   { 'uninstallCode' : null } |
   { 'startCanister' : null } |
+  { 'addMember' : null } |
   { 'removePermission' : null } |
   { 'createCanister' : null } |
   { 'deleteCanister' : null };

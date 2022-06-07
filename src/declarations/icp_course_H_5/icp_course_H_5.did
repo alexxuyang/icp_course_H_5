@@ -13,6 +13,7 @@ type cycle_manager =
  };
 type ProposalType__1 = 
  variant {
+   addMember;
    addPermission;
    createCanister;
    deleteCanister;
@@ -25,6 +26,7 @@ type ProposalType__1 =
  };
 type ProposalType = 
  variant {
+   addMember;
    addPermission;
    createCanister;
    deleteCanister;

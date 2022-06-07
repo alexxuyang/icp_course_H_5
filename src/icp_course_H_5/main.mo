@@ -49,6 +49,10 @@ actor class cycle_manager(m: Nat, list: [Types.Owner]) = self {
       assert(canisterPermissions.get(Option.unwrap(canister_id)) == ?true);
     };
 
+    if (ptype == #addMember) {
+      assert(Option.isSome(canister_id));
+    };
+
     var wasm_code_hash : [Nat8] = [];
 
     if (ptype == #installCode) {
@@ -65,9 +69,11 @@ actor class cycle_manager(m: Nat, list: [Types.Owner]) = self {
       assert(Option.isSome(canister_id));
     };
 
-    switch (canister_id) {
-      case (?id) assert(canister_check(id));
-      case (null) {};
+    if (ptype != #addMember) {
+      switch (canister_id) {
+        case (?id) assert(canister_check(id));
+        case (null) {};
+      };
     };
 
     let proposal : Proposal = {
@@ -76,7 +82,7 @@ actor class cycle_manager(m: Nat, list: [Types.Owner]) = self {
 			wasm_code_hash;
       ptype;
       proposer = msg.caller;
-      canister_id;
+      canister_id; // is Principal ID when add memeber
       approvers = [];
       refusers = [];
       finished = false;
@@ -105,7 +111,7 @@ actor class cycle_manager(m: Nat, list: [Types.Owner]) = self {
 
     assert(not proposal.finished);
 
-    assert(Option.isNull(Array.find(proposal.refusers, func(a: Owner) : Bool { a == msg.caller})));
+    assert(no_action_check(proposal, msg.caller));
 
     proposal := Types.add_refuser(proposal, msg.caller);
 
@@ -121,6 +127,8 @@ actor class cycle_manager(m: Nat, list: [Types.Owner]) = self {
   };
 
   public shared (msg) func approve(id: ID) : async Proposal {
+    Debug.print(debug_show(msg.caller));
+    
     // caller should be one of the owners
     assert(owner_check(msg.caller));
 
@@ -130,7 +138,7 @@ actor class cycle_manager(m: Nat, list: [Types.Owner]) = self {
 
     assert(not proposal.finished);
 
-    assert(Option.isNull(Array.find(proposal.approvers, func(a: Owner) : Bool { a == msg.caller})));
+    assert(no_action_check(proposal, msg.caller));
 
     proposal := Types.add_approver(proposal, msg.caller);
 
@@ -214,6 +222,11 @@ actor class cycle_manager(m: Nat, list: [Types.Owner]) = self {
             canister_id;
           });
         };
+        case (#addMember) {
+          let principal = Option.unwrap(proposal.canister_id);
+          ownerList := Array.append(ownerList, [principal]);
+          N := ownerList.size();
+        };
       };
 
       proposal := Types.finish_proposer(proposal);
@@ -224,6 +237,11 @@ actor class cycle_manager(m: Nat, list: [Types.Owner]) = self {
 
     proposals.put(id, proposal);
     proposals.get(id)
+  };
+
+  func no_action_check(proposal: Proposal, owner: Owner) : Bool {
+    return  Option.isNull(Array.find(proposal.refusers, func(a: Owner) : Bool { a == owner}))
+    and     Option.isNull(Array.find(proposal.approvers, func(a: Owner) : Bool { a == owner}));
   };
 
   func owner_check(owner : Owner) : Bool {
