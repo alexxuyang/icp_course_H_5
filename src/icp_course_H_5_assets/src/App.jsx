@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Actor, HttpAgent } from "@dfinity/agent";
-import { icp_course_H_5, idlFactory, canisterId } from "../../declarations/icp_course_H_5";
+import { icp_course_H_5, idlFactory, canisterId as main_canister_id } from "../../declarations/icp_course_H_5";
 import { AuthClient } from "@dfinity/auth-client";
-import { Button, Modal, Form } from 'react-bootstrap';
+import { Button, Modal } from 'react-bootstrap';
 import { Principal } from "@dfinity/principal";
+import sleep from 'await-sleep';
+import { useFilePicker } from 'use-file-picker';
+import { sha256 } from 'js-sha256'; //todo: replace sha256 algo
 
 let authClient;
 let agent;
 let webapp;
 
-const IIs_server_url = process.env.NODE_ENV === "production"? "https://identity.ic0.app/" : "http://localhost:8000/?canisterId=rkp4c-7iaaa-aaaaa-aaaca-cai";
+const IIs_server_url = process.env.NODE_ENV === "production"? "https://identity.ic0.app/" : "http://localhost:8000/?canisterId=qoctq-giaaa-aaaaa-aaaea-cai";
 
 function type_to_text(t) {
   return Object.getOwnPropertyNames(t)[0];
@@ -38,10 +41,11 @@ function App() {
   const [canistersM, setCanistersM] = useState([]);
   const [canistersStatus, setCanistersStatus] = useState([]);
   const [principal, setPrincipal] = useState(null);
-  const [identity, setIdentity] = useState(null);
   const [logined, setLogined] = useState(false);
   const [M, setM] = useState('');
   const [N, setN] = useState('');
+
+  const [processing, setProcessing] = useState(false);
 
   const [show, setShow] = useState(false);
   const handleClose = () => setShow(false);
@@ -50,72 +54,129 @@ function App() {
   const [cp_show, setCPShow] = useState(false);
   const handleCPClose = () => setCPShow(false);
   const handleCPShow = () => setCPShow(true);
+  
+  // when deal with install / upgrade code, save ID & op
+  const [canisterId, setCanisterId] = useState(null);
+  const [operation, setOperation] = useState(null);
+
+  const [openFileSelector, { filesContent, loading }] = useFilePicker({
+    accept: '.wasm',
+    multiple: false,
+    readAs: "ArrayBuffer"
+  });
 
   function handleLogoutClick() {
     agent = null;
     webapp = null;
     setLogined(false);
     setPrincipal(null);
-    setIdentity(null);
-  }  
+  }
 
   async function auth() {
     authClient = await AuthClient.create();
   }
 
-  const handleApproveProposal = async (id) => {
-    console.log("handleApproveProposal", id);
-
+  // check user is a valid owner and logined
+  const checkValidOwner = () => {
     if (!logined || 
       !webapp ||
       !(principal && team.some(e => e.toString() == principal))
     ) {
-    setShow(true);
-    return;
-  }
-
-    let result = await webapp.approve(parseInt(id));
-  }
-
-  const handleRefuseProposal = async (id) => {
-    console.log("handleRefuseProposal", id);
-
-    if (!logined || 
-      !webapp ||
-      !(principal && team.some(e => e.toString() == principal))
-    ) {
-    setShow(true);
-    return;
-  }
-
-    let result = await webapp.refuse(parseInt(id));
-  }
-
-  const handleCreateCanister = async() => {
-    await handleCanisterAction(null, "createCanister");
-  }
-
-  const handleCanisterAction = async (canister_id, op) => {
-    console.log(canister_id, op);
-    console.log(principal, team.some(e => e.toString() == principal));
-    
-    if (!logined || 
-        !webapp ||
-        !(principal && team.some(e => e.toString() == principal))
-      ) {
-      setShow(true);
-      return;
+      handleShow();
+      return false;
     }
+
+    return true;
+  }
+  
+  // user click proposal action: approve / refuse
+  const handleProposal = async (id, op) => {
+    if(!checkValidOwner()) return;
+
+    console.log("handleProposal", id, op);
+
+    setProcessing(true);
+
+    try {
+      let result = op === 'approve'? await webapp.approve(parseInt(id)) : await webapp.refuse(parseInt(id));
+    } catch (e) {
+      console.log(e);
+    } finally {
+      setProcessing(false);
+    }
+  }
+
+  // user click create canister button
+  const handleCreateCanister = async() => {
+    await handleCanisterAction(null, "createCanister", null);
+  }
+
+  // when user close code's model dialog
+  const handleCPAction = async (action) => {
+    handleCPClose();
+
+    // click cancel or no valid info in state
+    if (action === 'cancel' || !canisterId || !operation) {
+      setCanisterId(null);
+      setOperation(null);
+      return;
+    };
+
+    // no valid file content selected
+    if (!filesContent || !filesContent[0] || !filesContent[0].content) {
+      setCanisterId(null);
+      setOperation(null);
+      return;
+    };
+
+    try {
+      console.log("raw", sha256(filesContent[0].content));
+      console.log("new Uint8Array", sha256(new Uint8Array(filesContent[0].content)));
+
+      await handleCanisterAction(canisterId, operation, new Uint8Array(filesContent[0].content));
+    } catch (e) {
+      console.log(e);
+    } finally {
+      // set canisterId & operation to null
+      setCanisterId(null);
+      setOperation(null);
+    }
+  }
+
+  // when user click install / upgrade button
+  const handleCodeAction = async (canister_id, op) => {
+    if(!checkValidOwner()) return;
+    
+    setCanisterId(canister_id)
+    setOperation(op);
+
+    handleCPShow();
+  }
+
+  // final step to process canister's action
+  const handleCanisterAction = async (canister_id, op, content) => {
+    if(!checkValidOwner()) return;
+
+    setProcessing(true);
 
     let type = {};
     type[op] = null;
     console.log(type);
 
-    // propose(ptype: ProposalType, canister_id: ?Canister, wasm_code: ?Blob)
-    let result = await webapp.propose(type, [Principal.fromText(canister_id)], []);
+    await sleep(1000 * 3);
+
+    try {
+      console.log(content);
+      console.log(canister_id, op);
+      let result = await webapp.propose(type, canister_id? [Principal.fromText(canister_id)] : [], content? [content] : []);
+    } catch (e) {
+      console.log(e);
+    } finally {
+      setProcessing(false);
+    }
   }
 
-  const handClick = async () => {
+  const handLoginClick = async () => {
     authClient.login({
       identityProvider: IIs_server_url,
       onSuccess: async () => {
@@ -132,14 +193,13 @@ function App() {
 
         webapp = Actor.createActor(idlFactory, {
           agent,
-          canisterId: canisterId,
+          canisterId: main_canister_id,
         });
 
         console.log(identity);
         console.log(agent);
         console.log(webapp);
 
-        setIdentity(identity);
         setPrincipal(identity.getPrincipal().toText());
         setLogined(true);
       }
@@ -147,32 +207,32 @@ function App() {
   }
 
   const getData = async () => {
-    let team = await icp_course_H_5.get_owner_list();
-    setTeam(team);
-    // console.log(team);
-
-    let proposals = await icp_course_H_5.get_proposals();
-    setProposals(proposals);
-    // console.log(proposals);
-
-    let r = await icp_course_H_5.get_model();
-    setM(r[0].toString());
-    setN(r[1].toString());
-
-    let canisters = await icp_course_H_5.get_owned_canisters_list();
-    let canistersM = new Array(canisters.length);
-    let canistersStatus = new Array(canisters.length);
-    for(var i = 0; i < canisters.length; i++) {
-      canistersM[i] = await icp_course_H_5.get_permission(canisters[i]);
-      canistersStatus[i] = await icp_course_H_5.get_status(canisters[i]);
-      // console.log(canistersStatus[i]);
+    try {
+      let team = await icp_course_H_5.get_owner_list();
+      setTeam(team);
+  
+      let proposals = await icp_course_H_5.get_proposals();
+      setProposals(proposals);
+  
+      let r = await icp_course_H_5.get_model();
+      setM(r[0].toString());
+      setN(r[1].toString());
+  
+      let canisters = await icp_course_H_5.get_owned_canisters_list();
+      let canistersM = new Array(canisters.length);
+      let canistersStatus = new Array(canisters.length);
+      for(var i = 0; i < canisters.length; i++) {
+        canistersM[i] = await icp_course_H_5.get_permission(canisters[i]);
+        canistersStatus[i] = await icp_course_H_5.get_status(canisters[i]);
+      }
+  
+      setCanisters(canisters);
+      setCanistersM(canistersM);
+      setCanistersStatus(canistersStatus);
+    } catch (e) {
+      console.log(e);
+    } finally {
     }
-
-    setCanisters(canisters);
-    setCanistersM(canistersM);
-    setCanistersStatus(canistersStatus);
-    // console.log(canisters);
-    // console.log(canistersM);
   }
 
   useEffect(() => {
@@ -209,25 +269,38 @@ function App() {
       </div>
 
       <div>
-        <Modal show={cp_show} onHide={handleCPClose}
+        <Modal show={cp_show} // todo: remove right-upper close button
           size="lg"
           aria-labelledby="contained-modal-title-vcenter"
           centered
         >
           <Modal.Header closeButton>
-            <Modal.Title><h4>Create a Proposal</h4></Modal.Title>
+            <Modal.Title><h4>
+              {
+                operation === 'installCode'?
+                "Install Code on Canister" :
+                "Upgrade Code on Canister"
+              }
+            </h4></Modal.Title>
           </Modal.Header>
           <Modal.Body>
-            <Form.Select size="lg">
-              <option>Open this select menu</option>
-              <option value="1">One</option>
-              <option value="2">Two</option>
-              <option value="3">Three</option>
-            </Form.Select>
+            <div>
+              <button onClick={() => openFileSelector()}>Select files </button>
+              <br />
+              {filesContent.map((file) => (
+                <div>
+                  <h2>{file.name} SHA256</h2>
+                  <div>{sha256(file.content)}</div>
+                </div>
+              ))}
+            </div>
           </Modal.Body>
           <Modal.Footer>
-            <Button variant="secondary" onClick={handleCPClose}>
+          <Button variant="secondary" onClick={handleCPAction.bind(this, "cancel")}>
               Close
+            </Button>
+            <Button variant="primary" onClick={handleCPAction.bind(this, "confirm")}>
+              Confirm
             </Button>
           </Modal.Footer>
         </Modal>
@@ -236,8 +309,8 @@ function App() {
       <div>
         <div>
         {logined
-          ? <Button  variant="success" onClick={handleLogoutClick}>Logout</Button>
-          : <Button  variant="success" onClick={handClick}>IIs Login</Button> 
+          ? <Button variant="success" onClick={handleLogoutClick}>Logout</Button>
+          : <Button variant="success" onClick={handLoginClick}>IIs Login</Button> 
         }
         Already logined？{logined? "Yes": "No"}
         <br/>
@@ -319,8 +392,8 @@ function App() {
                               {data.finished.toString() !== 'true'
                                ?  
                                   <div>
-                                  <Button onClick={handleApproveProposal.bind(this, data.id.toString())}>Approve</Button>
-                                  <Button onClick={handleRefuseProposal.bind(this, data.id.toString())}>Refuse</Button>
+                                  <Button disabled={processing} onClick={handleProposal.bind(this, data.id.toString(), 'approve')}>同意</Button>
+                                  <Button disabled={processing} onClick={handleProposal.bind(this, data.id.toString(), 'refuse')}>拒绝</Button>
                                   </div>
                                 : <div></div>
                             }
@@ -338,7 +411,7 @@ function App() {
         </div>
 
         <div>
-          <Button  variant="success" onClick={handleCreateCanister}>
+          <Button disabled={processing} variant="success" onClick={handleCreateCanister}>
             Create Canister
           </Button>
         </div>
@@ -362,14 +435,14 @@ function App() {
                     <td>{type_to_text(canistersStatus[index][0])}</td>
                     <td>
                       <div>
-                        <Button variant="danger" onClick={handleCanisterAction.bind(this, t.toText(), "startCanister")}>启</Button>{' '}
-                        <Button variant="danger" onClick={handleCanisterAction.bind(this, t.toText(), "stopCanister")}>停</Button>{' '}
-                        <Button variant="danger" onClick={handleCanisterAction.bind(this, t.toText(), "deleteCanister")}>删</Button>{' '}
-                        <Button variant="warning" onClick={handleCanisterAction.bind(this, t.toText(), "installCode")}>装</Button>{' '}
-                        <Button variant="warning" onClick={handleCanisterAction.bind(this, t.toText(), "upgradeCode")}>升</Button>{' '}
-                        <Button variant="warning" onClick={handleCanisterAction.bind(this, t.toText(), "uninstallCode")}>卸</Button>{' '}
-                        <Button variant="secondary" onClick={handleCanisterAction.bind(this, t.toText(), "addPermission")}>限</Button>{' '}
-                        <Button variant="secondary" onClick={handleCanisterAction.bind(this, t.toText(), "removePermission")}>加</Button>{' '}
+                        <Button disabled={processing} variant="danger" onClick={handleCanisterAction.bind(this, t.toText(), "startCanister", null)}>启</Button>{' '}
+                        <Button disabled={processing} variant="danger" onClick={handleCanisterAction.bind(this, t.toText(), "stopCanister", null)}>停</Button>{' '}
+                        <Button disabled={processing} variant="danger" onClick={handleCanisterAction.bind(this, t.toText(), "deleteCanister", null)}>删</Button>{' '}
+                        <Button disabled={processing} variant="warning" onClick={handleCodeAction.bind(this, t.toText(), "installCode")}>装</Button>{' '}
+                        <Button disabled={processing} variant="warning" onClick={handleCodeAction.bind(this, t.toText(), "upgradeCode")}>升</Button>{' '}
+                        <Button disabled={processing} variant="warning" onClick={handleCanisterAction.bind(this, t.toText(), "uninstallCode", null)}>卸</Button>{' '}
+                        <Button disabled={processing} variant="secondary" onClick={handleCanisterAction.bind(this, t.toText(), "addPermission", null)}>限</Button>{' '}
+                        <Button disabled={processing} variant="secondary" onClick={handleCanisterAction.bind(this, t.toText(), "removePermission", null)}>加</Button>{' '}
                       </div>
                     </td>
                   </tr>
