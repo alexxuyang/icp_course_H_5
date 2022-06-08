@@ -10,7 +10,7 @@ import canister = "rrkah-fqaaa-aaaaa-aaaaq-cai";
 //---------------CREATE CANISTER---------------//
 
 // propose to add a member
-call canister.propose(variant {addMember}, opt principal "hff2h-vb2qm-te7au-7pjiv-5wk5g-3cz47-yjkdb-23ctt-hcudq-6ojma-lae", null);
+call canister.propose(variant {addMember}, opt principal "dxfds-mjlxo-wvjpg-5g5gi-dj2x6-hxgss-rlozd-rcrei-4cejo-rb3ii-eae", null);
 let proposal_id1 = _.id;
 
 // approve the above proposal by id1

@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Actor, HttpAgent } from "@dfinity/agent";
 import { icp_course_H_5, idlFactory, canisterId } from "../../declarations/icp_course_H_5";
 import { AuthClient } from "@dfinity/auth-client";
-import { Button, Modal } from 'react-bootstrap';
+import { Button, Modal, Form } from 'react-bootstrap';
+import { Principal } from "@dfinity/principal";
 
 let authClient;
 let agent;
@@ -11,7 +12,7 @@ let webapp;
 const IIs_server_url = process.env.NODE_ENV === "production"? "https://identity.ic0.app/" : "http://localhost:8000/?canisterId=rkp4c-7iaaa-aaaaa-aaaca-cai";
 
 function type_to_text(t) {
-    return Object.getOwnPropertyNames(t)[0]
+  return Object.getOwnPropertyNames(t)[0];
 }
 
 function principal_to_short(t) {
@@ -35,7 +36,9 @@ function App() {
   const [team, setTeam] = useState([]);
   const [canisters, setCanisters] = useState([]);
   const [canistersM, setCanistersM] = useState([]);
-  const [principal, setPrincipal] = useState('');
+  const [canistersStatus, setCanistersStatus] = useState([]);
+  const [principal, setPrincipal] = useState(null);
+  const [identity, setIdentity] = useState(null);
   const [logined, setLogined] = useState(false);
   const [M, setM] = useState('');
   const [N, setN] = useState('');
@@ -44,11 +47,16 @@ function App() {
   const handleClose = () => setShow(false);
   const handleShow = () => setShow(true);
 
+  const [cp_show, setCPShow] = useState(false);
+  const handleCPClose = () => setCPShow(false);
+  const handleCPShow = () => setCPShow(true);
+
   function handleLogoutClick() {
     agent = null;
     webapp = null;
     setLogined(false);
-    setPrincipal('');
+    setPrincipal(null);
+    setIdentity(null);
   }  
 
   async function auth() {
@@ -58,10 +66,13 @@ function App() {
   const handleApproveProposal = async (id) => {
     console.log("handleApproveProposal", id);
 
-    if (!logined) {
-      handleShow();
-      return;
-    }
+    if (!logined || 
+      !webapp ||
+      !(principal && team.some(e => e.toString() == principal))
+    ) {
+    setShow(true);
+    return;
+  }
 
     let result = await webapp.approve(parseInt(id));
   }
@@ -69,12 +80,39 @@ function App() {
   const handleRefuseProposal = async (id) => {
     console.log("handleRefuseProposal", id);
 
-    if (!logined) {
+    if (!logined || 
+      !webapp ||
+      !(principal && team.some(e => e.toString() == principal))
+    ) {
+    setShow(true);
+    return;
+  }
+
+    let result = await webapp.refuse(parseInt(id));
+  }
+
+  const handleCreateCanister = async() => {
+    await handleCanisterAction(null, "createCanister");
+  }
+
+  const handleCanisterAction = async (canister_id, op) => {
+    console.log(canister_id, op);
+    console.log(principal, team.some(e => e.toString() == principal));
+    
+    if (!logined || 
+        !webapp ||
+        !(principal && team.some(e => e.toString() == principal))
+      ) {
       setShow(true);
       return;
     }
 
-    let result = await webapp.refuse(parseInt(id));
+    let type = {};
+    type[op] = null;
+    console.log(type);
+
+    // propose(ptype: ProposalType, canister_id: ?Canister, wasm_code: ?Blob)
+    let result = await webapp.propose(type, [Principal.fromText(canister_id)], []);
   }
 
   const handClick = async () => {
@@ -101,6 +139,7 @@ function App() {
         console.log(agent);
         console.log(webapp);
 
+        setIdentity(identity);
         setPrincipal(identity.getPrincipal().toText());
         setLogined(true);
       }
@@ -108,27 +147,30 @@ function App() {
   }
 
   const getData = async () => {
-    const team = await icp_course_H_5.get_owner_list();
+    let team = await icp_course_H_5.get_owner_list();
     setTeam(team);
     // console.log(team);
 
-    const proposals = await icp_course_H_5.get_proposals();
+    let proposals = await icp_course_H_5.get_proposals();
     setProposals(proposals);
     // console.log(proposals);
 
-    const r = await icp_course_H_5.get_model();
+    let r = await icp_course_H_5.get_model();
     setM(r[0].toString());
     setN(r[1].toString());
 
-    const canisters = await icp_course_H_5.get_owned_canisters_list();
+    let canisters = await icp_course_H_5.get_owned_canisters_list();
     let canistersM = new Array(canisters.length);
+    let canistersStatus = new Array(canisters.length);
     for(var i = 0; i < canisters.length; i++) {
       canistersM[i] = await icp_course_H_5.get_permission(canisters[i]);
+      canistersStatus[i] = await icp_course_H_5.get_status(canisters[i]);
+      // console.log(canistersStatus[i]);
     }
 
     setCanisters(canisters);
     setCanistersM(canistersM);
-
+    setCanistersStatus(canistersStatus);
     // console.log(canisters);
     // console.log(canistersM);
   }
@@ -157,9 +199,9 @@ function App() {
           <Modal.Header closeButton>
             <Modal.Title><h4>Hey, It's You ^_^</h4></Modal.Title>
           </Modal.Header>
-          <Modal.Body><h4>Woohoo, you're reading this text coz you aren't logined!</h4></Modal.Body>
+          <Modal.Body><h4>Woohoo, please login or you are not an owner!</h4></Modal.Body>
           <Modal.Footer>
-            <Button variant="secondary" onClick={handleClose}>
+            <Button variant="primary" onClick={handleClose}>
               Close
             </Button>
           </Modal.Footer>
@@ -167,7 +209,31 @@ function App() {
       </div>
 
       <div>
-        
+        <Modal show={cp_show} onHide={handleCPClose}
+          size="lg"
+          aria-labelledby="contained-modal-title-vcenter"
+          centered
+        >
+          <Modal.Header closeButton>
+            <Modal.Title><h4>Create a Proposal</h4></Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <Form.Select size="lg">
+              <option>Open this select menu</option>
+              <option value="1">One</option>
+              <option value="2">Two</option>
+              <option value="3">Three</option>
+            </Form.Select>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={handleCPClose}>
+              Close
+            </Button>
+          </Modal.Footer>
+        </Modal>
+      </div>
+
+      <div>
         <div>
         {logined
           ? <Button  variant="success" onClick={handleLogoutClick}>Logout</Button>
@@ -271,11 +337,19 @@ function App() {
           <p><b>Installed Canisters List</b></p>
         </div>
 
+        <div>
+          <Button  variant="success" onClick={handleCreateCanister}>
+            Create Canister
+          </Button>
+        </div>
+
         <table className="table table-striped">
           <thead className="thead-dark">
             <tr>
                 <td>Canister</td>
                 <td>DAO Managed</td>
+                <td>Status</td>
+                <td>Actions</td>
             </tr>
             </thead>
           <tbody>
@@ -285,6 +359,19 @@ function App() {
                   <tr key={t.toText()}>
                     <td>{t.toText()}</td>
                     <td>{canistersM[index].toString()}</td>
+                    <td>{type_to_text(canistersStatus[index][0])}</td>
+                    <td>
+                      <div>
+                        <Button variant="danger" onClick={handleCanisterAction.bind(this, t.toText(), "startCanister")}>启</Button>{' '}
+                        <Button variant="danger" onClick={handleCanisterAction.bind(this, t.toText(), "stopCanister")}>停</Button>{' '}
+                        <Button variant="danger" onClick={handleCanisterAction.bind(this, t.toText(), "deleteCanister")}>删</Button>{' '}
+                        <Button variant="warning" onClick={handleCanisterAction.bind(this, t.toText(), "installCode")}>装</Button>{' '}
+                        <Button variant="warning" onClick={handleCanisterAction.bind(this, t.toText(), "upgradeCode")}>升</Button>{' '}
+                        <Button variant="warning" onClick={handleCanisterAction.bind(this, t.toText(), "uninstallCode")}>卸</Button>{' '}
+                        <Button variant="secondary" onClick={handleCanisterAction.bind(this, t.toText(), "addPermission")}>限</Button>{' '}
+                        <Button variant="secondary" onClick={handleCanisterAction.bind(this, t.toText(), "removePermission")}>加</Button>{' '}
+                      </div>
+                    </td>
                   </tr>
                 )
               })

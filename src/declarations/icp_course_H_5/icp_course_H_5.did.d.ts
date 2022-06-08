@@ -1,5 +1,8 @@
 import type { Principal } from '@dfinity/principal';
 export type Canister = Principal;
+export type CanisterStatus = { 'stopped' : null } |
+  { 'stopping' : null } |
+  { 'running' : null };
 export type Canister__1 = Principal;
 export type ID = bigint;
 export type ID__1 = bigint;
@@ -44,6 +47,7 @@ export interface cycle_manager {
   'get_permission' : (arg_0: Canister__1) => Promise<[] | [boolean]>,
   'get_proposal' : (arg_0: ID) => Promise<[] | [Proposal]>,
   'get_proposals' : () => Promise<Array<Proposal>>,
+  'get_status' : (arg_0: Canister__1) => Promise<[] | [CanisterStatus]>,
   'greet' : (arg_0: string) => Promise<string>,
   'propose' : (
       arg_0: ProposalType__1,

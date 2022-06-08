@@ -28,6 +28,11 @@ export const idlFactory = ({ IDL }) => {
   });
   const Canister__1 = IDL.Principal;
   const Owner__1 = IDL.Principal;
+  const CanisterStatus = IDL.Variant({
+    'stopped' : IDL.Null,
+    'stopping' : IDL.Null,
+    'running' : IDL.Null,
+  });
   const ProposalType__1 = IDL.Variant({
     'stopCanister' : IDL.Null,
     'upgradeCode' : IDL.Null,
@@ -52,6 +57,11 @@ export const idlFactory = ({ IDL }) => {
     'get_permission' : IDL.Func([Canister__1], [IDL.Opt(IDL.Bool)], ['query']),
     'get_proposal' : IDL.Func([ID], [IDL.Opt(Proposal)], ['query']),
     'get_proposals' : IDL.Func([], [IDL.Vec(Proposal)], ['query']),
+    'get_status' : IDL.Func(
+        [Canister__1],
+        [IDL.Opt(CanisterStatus)],
+        ['query'],
+      ),
     'greet' : IDL.Func([IDL.Text], [IDL.Text], []),
     'propose' : IDL.Func(
         [ProposalType__1, IDL.Opt(Canister__1), IDL.Opt(IDL.Vec(IDL.Nat8))],

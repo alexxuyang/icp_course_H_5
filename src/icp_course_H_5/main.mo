@@ -6,6 +6,7 @@ import Iter "mo:base/Iter";
 import Blob "mo:base/Blob";
 import Nat "mo:base/Nat";
 import Option "mo:base/Option";
+import Error "mo:base/Error";
 import Principal "mo:base/Principal";
 import Cycles "mo:base/ExperimentalCycles";
 
@@ -20,12 +21,14 @@ actor class cycle_manager(m: Nat, list: [Types.Owner]) = self {
   public type ID = Types.ID;
   public type Proposal = Types.Proposal;
   public type ProposalType = Types.ProposalType;
+  public type CanisterStatus = Types.CanisterStatus;
 
   var proposals : Buffer.Buffer<Proposal> = Buffer.Buffer<Proposal>(0);
   var ownedCanisters : [Canister] = [];
 
   // map of ( Canister - Bool), value is true means this canister need multi-sig managed
   var canisterPermissions : HashMap.HashMap<Canister, Bool> = HashMap.HashMap<Canister, Bool>(0, func(x: Canister,y: Canister) {x==y}, Principal.hash);
+  var canisterStatus : HashMap.HashMap<Canister, CanisterStatus> = HashMap.HashMap<Canister, CanisterStatus>(0, func(x: Canister,y: Canister) {x==y}, Principal.hash);
   var ownerList : [Owner] = list;
 
   var M : Nat = m;
@@ -166,6 +169,7 @@ actor class cycle_manager(m: Nat, list: [Types.Owner]) = self {
           let canister_id = result.canister_id;
           ownedCanisters := Array.append(ownedCanisters, [canister_id]);
           canisterPermissions.put(canister_id, true);
+          canisterStatus.put(canister_id, #stopped);
           proposal := Types.update_canister_id(proposal, canister_id);
         };
         case (#installCode) {
@@ -239,6 +243,21 @@ actor class cycle_manager(m: Nat, list: [Types.Owner]) = self {
     proposals.get(id)
   };
 
+  system func heartbeat() : async () {
+    let ic : IC.Self = actor("aaaaa-aa");
+    for( canister_id in canisterStatus.keys()) {
+      try {
+        Debug.print(debug_show("00000"));
+        let result = await ic.canister_status({canister_id});
+        Debug.print(debug_show("11111"));
+        canisterStatus.put(canister_id, result.status);
+        Debug.print(debug_show("22222", canister_id, result.status));
+      } catch e {
+        Debug.print(debug_show(Error.message(e)));
+      }
+    }
+  };
+
   func no_action_check(proposal: Proposal, owner: Owner) : Bool {
     return  Option.isNull(Array.find(proposal.refusers, func(a: Owner) : Bool { a == owner}))
     and     Option.isNull(Array.find(proposal.approvers, func(a: Owner) : Bool { a == owner}));
@@ -262,6 +281,10 @@ actor class cycle_manager(m: Nat, list: [Types.Owner]) = self {
 
   public query func get_model() : async (Nat, Nat) {
     (M, N)
+  };
+
+  public query func get_status(id: Canister) : async ?CanisterStatus {
+    canisterStatus.get(id)
   };
 
   public query func get_permission(id: Canister) : async ?Bool {

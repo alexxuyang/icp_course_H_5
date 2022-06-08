@@ -7,6 +7,7 @@ type cycle_manager =
    get_permission: (Canister__1) -> (opt bool) query;
    get_proposal: (ID) -> (opt Proposal) query;
    get_proposals: () -> (vec Proposal) query;
+   get_status: (Canister__1) -> (opt CanisterStatus) query;
    greet: (text) -> (text);
    propose: (ProposalType__1, opt Canister__1, opt blob) -> (Proposal);
    refuse: (ID) -> (Proposal);
@@ -54,5 +55,11 @@ type Owner = principal;
 type ID__1 = nat;
 type ID = nat;
 type Canister__1 = principal;
+type CanisterStatus = 
+ variant {
+   running;
+   stopped;
+   stopping;
+ };
 type Canister = principal;
 service : (nat, vec Owner) -> cycle_manager
