@@ -206,8 +206,6 @@ function App() {
     });
 
     console.log(identity);
-    console.log(agent);
-    console.log(webapp);
 
     setPrincipal(identity.getPrincipal().toText());
     setLogined(true);
@@ -216,6 +214,7 @@ function App() {
   const handLoginClick = async () => {
     authClient.login({
       identityProvider: IIs_server_url,
+      maxTimeToLive: BigInt(24) * BigInt(3_600_000_000_000),
       onSuccess: async () => {
         const identity = await authClient.getIdentity();
         
