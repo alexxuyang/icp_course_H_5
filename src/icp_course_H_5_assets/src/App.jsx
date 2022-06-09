@@ -1,17 +1,16 @@
 import { icp_course_H_5, idlFactory, canisterId as main_canister_id } from "../../declarations/icp_course_H_5";
 
 import React, { useState, useEffect } from 'react';
-import { Button, Modal } from 'react-bootstrap';
+import { Button, Modal, Spinner } from 'react-bootstrap';
 
 import { Actor, HttpAgent } from "@dfinity/agent";
-import { Ed25519PublicKey } from "@dfinity/identity";
 import { AuthClient } from "@dfinity/auth-client";
 import { Principal } from "@dfinity/principal";
 
 import sleep from 'await-sleep';
 import { useFilePicker } from 'use-file-picker';
 import { sha256 } from 'js-sha256';
-import logTime from 'log-current-time';
+import _ from 'lodash';
 
 let authClient;
 let agent;
@@ -52,6 +51,20 @@ function App() {
 
   const [processing, setProcessing] = useState(false);
 
+  const [createCanister, setCreateCanister] = useState(false);
+  const [startCanister, setStartCanister] = useState(false);
+  const [stopCanister, setStopCanister] = useState(false);
+  const [deleteCanister, setDeleteCanister] = useState(false);
+  const [installCode, setInstallCode] = useState(false);
+  const [upgradeCode, setUpgradeCode] = useState(false);
+  const [uninstallCode, setUninstallCode] = useState(false);
+  const [addPermission, setAddPermission] = useState(false);
+  const [removePermission, setRemovePermission] = useState(false);
+
+  const [approveProposal, setApproveProposal] = useState(false);
+  const [refuseProposal, setRefuseProposal] = useState(false);
+  const [proposalId, setProposalId] = useState(null);  
+
   const [show, setShow] = useState(false);
   const handleClose = () => setShow(false);
   const handleShow = () => setShow(true);
@@ -91,7 +104,6 @@ function App() {
         setupIdentityAndAgent(identity);
       }
     }
-
   }
 
   // check user is a valid owner and logined
@@ -107,6 +119,25 @@ function App() {
     return true;
   }
   
+  const isApproverOrRefuser = (id) => {
+    let proposal;
+    for (let p of proposals) {
+      if (p.id.toString() === id) {
+        proposal = p;
+        break;
+      }
+    }
+
+    if (!proposal) return;
+
+    if (proposal) {
+      return proposal.approvers.some(e => e.toText() === principal) ||
+            proposal.refusers.some(e => e.toText() === principal)
+    }
+
+    return false;
+  }
+
   // user click proposal action: approve / refuse
   const handleProposal = async (id, op) => {
     if(!checkValidOwner()) return;
@@ -114,13 +145,17 @@ function App() {
     console.log("handleProposal", id, op);
 
     setProcessing(true);
+    setProposalId(id);
+    eval( "set" + op.charAt(0).toUpperCase() + op.slice(1) + "(true)");
 
     try {
-      let result = op === 'approve'? await webapp.approve(parseInt(id)) : await webapp.refuse(parseInt(id));
+      let result = op === 'approveProposal'? await webapp.approve(parseInt(id)) : await webapp.refuse(parseInt(id));
     } catch (e) {
       console.log(e);
     } finally {
       setProcessing(false);
+      setProposalId(null);
+      eval( "set" + op.charAt(0).toUpperCase() + op.slice(1) + "(false)");
     }
   }
 
@@ -176,6 +211,8 @@ function App() {
 
     setProcessing(true);
 
+    eval( "set" + op.charAt(0).toUpperCase() + op.slice(1) + "(true)");
+
     let type = {};
     type[op] = null;
 
@@ -188,6 +225,7 @@ function App() {
       console.log(e);
     } finally {
       setProcessing(false);
+      eval( "set" + op.charAt(0).toUpperCase() + op.slice(1) + "(false)");
     }
   }
 
@@ -260,8 +298,6 @@ function App() {
   }
 
   useEffect(() => {
-    logTime("useEffect");
-
     auth();
     getData();
 
@@ -286,10 +322,10 @@ function App() {
           <Modal.Header closeButton>
             <Modal.Title><h4>Hey, It's You ^_^</h4></Modal.Title>
           </Modal.Header>
-          <Modal.Body><h4>Woohoo, please login or you are not an owner!</h4></Modal.Body>
+          <Modal.Body><h4>请登录或者您不是管理员！</h4></Modal.Body>
           <Modal.Footer>
             <Button variant="primary" onClick={handleClose}>
-              Close
+              关闭
             </Button>
           </Modal.Footer>
         </Modal>
@@ -312,7 +348,7 @@ function App() {
           </Modal.Header>
           <Modal.Body>
             <div>
-              <button onClick={() => openFileSelector()}>Select files </button>
+              <button onClick={() => openFileSelector()}>选择WASM文件</button>
               <br />
               {filesContent.map((file) => (
                 <div key={file.name}>
@@ -324,36 +360,33 @@ function App() {
           </Modal.Body>
           <Modal.Footer>
           <Button variant="secondary" onClick={handleCPAction.bind(this, "cancel")}>
-              Close
+              取消
             </Button>
             <Button variant="primary" onClick={handleCPAction.bind(this, "confirm")}>
-              Confirm
+              确认
             </Button>
           </Modal.Footer>
         </Modal>
       </div>
 
-      <div>
-        <div>
-        {logined
-          ? <Button variant="success" onClick={handleLogoutClick}>Logout</Button>
-          : <Button variant="success" onClick={handLoginClick}>IIs Login</Button> 
-        }
-        Already logined？{logined? "Yes": "No"}
-        <br/>
-        </div>
-      </div>
-
       <div style={{ "backgroundColor": "#AAB7B8", "fontSize": "20px" }}>
-        <p><b>Logined User Principal：{principal}</b></p>
+        <p><b>
+        {
+          logined
+          ? <Button variant="success" onClick={handleLogoutClick}>退出</Button>
+          : <Button variant="success" onClick={handLoginClick}>IIs登录</Button>
+        }
+        {logined? "已登录用户Principal：": "尚未登录"}
+        {principal}
+        </b></p>
       </div>
 
       <div style={{ "backgroundColor": "#e0b0ab", "fontSize": "20px" }}>
-        <p><b>DAO controlled cycles wallets! (Model: {M} / {N})</b></p>
+        <p><b>DAO管理的Canisters工具! (模式: {M} / {N})</b></p>
       </div>
       
       <div style={{ "backgroundColor": "#d0cb8c", "fontSize": "20px" }}>
-        <p><b>DAO Team Members</b></p>
+        <p><b>DAO管理员列表</b></p>
       </div>
         <table className="table table-striped">
           <tbody>
@@ -369,12 +402,26 @@ function App() {
 
         <div>
           <Button disabled={processing} variant="success" onClick={handleCreateCanister}>
-            Create Canister
+            { createCanister ?
+              <Spinner
+                as="span"
+                animation="grow"
+                size="sm"
+                role="status"
+                aria-hidden="true"
+              /> :
+              <div/>
+            }
+            新建Canister
           </Button>
         </div>
 
+        {/* <Spinner animation="border" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </Spinner> */}
+
         <div style={{ "backgroundColor": "#bdbdbd", "fontSize": "20px" }}>
-          <p><b>Installed Canisters List</b></p>
+          <p><b>已创建Canisters列表</b></p>
         </div>
 
         <table className="table table-striped">
@@ -382,8 +429,8 @@ function App() {
             <tr>
                 <td>Canister</td>
                 <td>DAO Managed</td>
-                <td>Status</td>
-                <td>Actions</td>
+                <td>状态</td>
+                <td>操作</td>
             </tr>
             </thead>
           <tbody>
@@ -396,14 +443,110 @@ function App() {
                     <td>{type_to_text(canistersStatus[index][0])}</td>
                     <td>
                       <div>
-                        <Button disabled={processing} variant="danger" onClick={handleCanisterAction.bind(this, t.toText(), "startCanister", null)}>启</Button>{' '}
-                        <Button disabled={processing} variant="danger" onClick={handleCanisterAction.bind(this, t.toText(), "stopCanister", null)}>停</Button>{' '}
-                        <Button disabled={processing} variant="danger" onClick={handleCanisterAction.bind(this, t.toText(), "deleteCanister", null)}>删</Button>{' '}
-                        <Button disabled={processing} variant="warning" onClick={handleCodeAction.bind(this, t.toText(), "installCode")}>装</Button>{' '}
-                        <Button disabled={processing} variant="warning" onClick={handleCodeAction.bind(this, t.toText(), "upgradeCode")}>升</Button>{' '}
-                        <Button disabled={processing} variant="warning" onClick={handleCanisterAction.bind(this, t.toText(), "uninstallCode", null)}>卸</Button>{' '}
-                        <Button disabled={processing} variant="secondary" onClick={handleCanisterAction.bind(this, t.toText(), "addPermission", null)}>限</Button>{' '}
-                        <Button disabled={processing} variant="secondary" onClick={handleCanisterAction.bind(this, t.toText(), "removePermission", null)}>加</Button>{' '}
+                        <Button disabled={processing} variant="danger" onClick={handleCanisterAction.bind(this, t.toText(), "startCanister", null)}>
+                          { startCanister ?
+                            <Spinner
+                              as="span"
+                              animation="grow"
+                              size="sm"
+                              role="status"
+                              aria-hidden="true"
+                            /> :
+                            <div/>
+                          }
+                          启
+                        </Button>{' '}
+                        <Button disabled={processing} variant="danger" onClick={handleCanisterAction.bind(this, t.toText(), "stopCanister", null)}>
+                          { stopCanister ?
+                            <Spinner
+                              as="span"
+                              animation="grow"
+                              size="sm"
+                              role="status"
+                              aria-hidden="true"
+                            /> :
+                            <div/>
+                          }
+                          停
+                        </Button>{' '}
+                        <Button disabled={processing} variant="danger" onClick={handleCanisterAction.bind(this, t.toText(), "deleteCanister", null)}>
+                          { deleteCanister ?
+                            <Spinner
+                              as="span"
+                              animation="grow"
+                              size="sm"
+                              role="status"
+                              aria-hidden="true"
+                            /> :
+                            <div/>
+                          }
+                          删
+                        </Button>{' '}
+                        <Button disabled={processing} variant="warning" onClick={handleCodeAction.bind(this, t.toText(), "installCode")}>
+                          { installCode ?
+                            <Spinner
+                              as="span"
+                              animation="grow"
+                              size="sm"
+                              role="status"
+                              aria-hidden="true"
+                            /> :
+                            <div/>
+                          }
+                          装
+                        </Button>{' '}
+                        <Button disabled={processing} variant="warning" onClick={handleCodeAction.bind(this, t.toText(), "upgradeCode")}>
+                          { upgradeCode ?
+                            <Spinner
+                              as="span"
+                              animation="grow"
+                              size="sm"
+                              role="status"
+                              aria-hidden="true"
+                            /> :
+                            <div/>
+                          }
+                          升
+                        </Button>{' '}
+                        <Button disabled={processing} variant="warning" onClick={handleCanisterAction.bind(this, t.toText(), "uninstallCode", null)}>
+                          { uninstallCode ?
+                            <Spinner
+                              as="span"
+                              animation="grow"
+                              size="sm"
+                              role="status"
+                              aria-hidden="true"
+                            /> :
+                            <div/>
+                          }
+                          卸
+                        </Button>{' '}
+                        <Button disabled={processing} variant="secondary" onClick={handleCanisterAction.bind(this, t.toText(), "addPermission", null)}>
+                          { addPermission ?
+                            <Spinner
+                              as="span"
+                              animation="grow"
+                              size="sm"
+                              role="status"
+                              aria-hidden="true"
+                            /> :
+                            <div/>
+                          }
+                          加
+                        </Button>{' '}
+                        <Button disabled={processing} variant="secondary" onClick={handleCanisterAction.bind(this, t.toText(), "removePermission", null)}>
+                          { removePermission ?
+                            <Spinner
+                              as="span"
+                              animation="grow"
+                              size="sm"
+                              role="status"
+                              aria-hidden="true"
+                            /> :
+                            <div/>
+                          }
+                          减
+                        </Button>{' '}
                       </div>
                     </td>
                   </tr>
@@ -422,14 +565,14 @@ function App() {
             <thead className="thead-dark">
             <tr>
                 <td width="50">ID</td>
-                <td width="250">Type</td>
+                <td width="250">类型</td>
                 <td width="250">Canister / Principal</td>
-                <td width="300">Proposer</td>
-                <td width="300">Approvers</td>
-                <td width="300">Refusers</td>
-                <td width="100">WasmHash(SHA256)</td>
-                <td width="100">Finished</td>
-                <td width="100">Actions</td>
+                <td width="300">发起人</td>
+                <td width="300">审批人</td>
+                <td width="300">拒绝人</td>
+                <td width="100">Wasm SHA256</td>
+                <td width="100">已完成</td>
+                <td width="200">操作</td>
             </tr>
             </thead>
             <tbody>
@@ -473,12 +616,36 @@ function App() {
                             </td>
                             <td width="100">{toHexString(data.wasm_code_hash)}</td>
                             <td width="100">{data.finished.toString()}</td>
-                            <td width="100">
-                              {data.finished.toString() !== 'true'
-                               ?  
+                            <td width="200">
+                              {data.finished.toString() !== 'true' && !isApproverOrRefuser(data.id.toString())
+                               ?
                                   <div>
-                                  <Button disabled={processing} onClick={handleProposal.bind(this, data.id.toString(), 'approve')}>同意</Button>
-                                  <Button disabled={processing} onClick={handleProposal.bind(this, data.id.toString(), 'refuse')}>拒绝</Button>
+                                  <Button disabled={processing} onClick={handleProposal.bind(this, data.id.toString(), 'approveProposal')}>
+                                    { approveProposal && proposalId === data.id.toString() ?
+                                      <Spinner
+                                        as="span"
+                                        animation="grow"
+                                        size="sm"
+                                        role="status"
+                                        aria-hidden="true"
+                                      /> :
+                                      <div/>
+                                    }
+                                    同意
+                                  </Button>{' '}
+                                  <Button disabled={processing} onClick={handleProposal.bind(this, data.id.toString(), 'refuseProposal')}>
+                                    { refuseProposal && proposalId === data.id.toString() ?
+                                      <Spinner
+                                        as="span"
+                                        animation="grow"
+                                        size="sm"
+                                        role="status"
+                                        aria-hidden="true"
+                                      /> :
+                                      <div/>
+                                    }
+                                    拒绝
+                                  </Button>
                                   </div>
                                 : <div></div>
                             }
