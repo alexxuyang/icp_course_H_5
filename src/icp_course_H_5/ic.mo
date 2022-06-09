@@ -32,7 +32,7 @@ module {
         cycles : Nat;
         settings : definite_canister_settings;
         module_hash : ?[Nat8];
-        idle_cycles_burned_per_second : Float;
+        // idle_cycles_burned_per_second : Float;
       };
     create_canister : shared { settings : ?canister_settings } -> async {
         canister_id : canister_id;

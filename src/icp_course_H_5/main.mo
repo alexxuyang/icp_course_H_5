@@ -247,11 +247,8 @@ actor class cycle_manager(m: Nat, list: [Types.Owner]) = self {
     let ic : IC.Self = actor("aaaaa-aa");
     for( canister_id in canisterStatus.keys()) {
       try {
-        Debug.print(debug_show("00000"));
         let result = await ic.canister_status({canister_id});
-        Debug.print(debug_show("11111"));
         canisterStatus.put(canister_id, result.status);
-        Debug.print(debug_show("22222", canister_id, result.status));
       } catch e {
         Debug.print(debug_show(Error.message(e)));
       }
