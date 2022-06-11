@@ -7,6 +7,7 @@
 - python: 2.7.18
 - nodejs: v14.18.1
 - rust: rustc 1.61.0 (fe5b13d68 2022-05-18)
+- ic-repl: 0.1.3
 
 除了本仓库外，还需要[internet identity](https://github.com/dfinity/internet-identity)  
 请checkout这个[commit](https://github.com/dfinity/internet-identity/commit/8d160c5a071742d425d02ce46ea347dc3496a620)  
@@ -26,11 +27,13 @@ dfx start --clean
 ```
 ![启动dfx服务](https://github.com/alexxuyang/icp_course_H_5/blob/main/images/001.png)
 
-部署motoko合约：
+部署合约：
 ```
 dfx deploy --with-cycles=5000000000000 --argument '(2, vec {principal "cnh44-cjhoh-yyoqz-tcp2t-yto7n-6vlpk-xw52p-zuo43-rrlge-4ozr5-6ae"; principal "ndb4h-h6tuq-2iudh-j3opo-trbbe-vljdk-7bxgi-t5eyp-744ga-6eqv6-2ae"; principal "lzf3n-nlh22-cyptu-56v52-klerd-chdxu-t62na-viscs-oqr2d-kyl44-rqe"})'
 ```
-![部署motoko合约](https://github.com/alexxuyang/icp_course_H_5/blob/main/images/002.png)
+初始化DAO为2/3模式，并将三个identity的principal传入初始化函数。
+可以在cmd目录下，找到这三个principal的pem文件。
+![部署合约](https://github.com/alexxuyang/icp_course_H_5/blob/main/images/002.png)
 
 ### 启动II服务
 
@@ -51,11 +54,11 @@ npm i --save @dfinity/agent @dfinity/candid @dfinity/authentication @dfinity/ide
 npm ci
 ```
 
-启动II motoko合约：
+部署合约：
 ```
 dfx deploy --no-wallet --argument '(null)'
 ```
-![启动II motoko合约](https://github.com/alexxuyang/icp_course_H_5/blob/main/images/004.png)
+![部署合约](https://github.com/alexxuyang/icp_course_H_5/blob/main/images/004.png)
 
 ## 链接与服务
 
@@ -68,4 +71,8 @@ dfx deploy --no-wallet --argument '(null)'
 - II合约candid ID：rkp4c-7iaaa-aaaaa-aaaca-cai
 
 可能你得到的ID和我不一致，请仔细查阅终端的输出并找到相关信息。
+
+由于DAO管理工具依赖II服务，并将其II URL写到了[App.jsx](https://github.com/alexxuyang/icp_course_H_5/blob/aa40a630f3492cc15e8820e6e377cda1a1cc07dd/src/icp_course_H_5_assets/src/App.jsx#L19)这里，所以如果candid ID不同的话，可能会打不开II。
+
+## 启动程序
 
