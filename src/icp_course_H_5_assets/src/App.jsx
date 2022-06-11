@@ -370,35 +370,20 @@ function App() {
       </div>
 
       <div style={{ "backgroundColor": "#AAB7B8", "fontSize": "20px" }}>
-        <p><b>
+        <p align="right"><b>
+        {logined? "已登录用户Principal：": "尚未登录 "}
+        {principal} {''}
         {
           logined
           ? <Button variant="success" onClick={handleLogoutClick}>退出</Button>
           : <Button variant="success" onClick={handLoginClick}>IIs登录</Button>
         }
-        {logined? "已登录用户Principal：": "尚未登录"}
-        {principal}
         </b></p>
       </div>
 
       <div style={{ "backgroundColor": "#e0b0ab", "fontSize": "20px" }}>
         <p><b>DAO管理的Canisters工具! (模式: {M} / {N})</b></p>
       </div>
-      
-      <div style={{ "backgroundColor": "#d0cb8c", "fontSize": "20px" }}>
-        <p><b>DAO管理员列表</b></p>
-      </div>
-        <table className="table table-striped">
-          <tbody>
-            {
-              team.map(t => {
-                return (
-                  <tr style={{color:principal === t.toString() ? "red": ""}} key={t.toString()}><td>{t.toString()} {principal === t.toString() ? "（我自己）": ""}</td></tr>
-                )
-              })
-            }
-          </tbody>
-        </table>
 
         <div>
           <Button disabled={processing} variant="success" onClick={handleCreateCanister}>
@@ -657,6 +642,22 @@ function App() {
             </tbody>
         </table>
         </div>
+
+        <div style={{ "backgroundColor": "#d0cb8c", "fontSize": "20px" }}>
+        <p><b>DAO管理员列表</b></p>
+        </div>
+        <table className="table table-striped">
+          <tbody>
+            {
+              team.map(t => {
+                return (
+                  <tr style={{color:principal === t.toString() ? "red": ""}} key={t.toString()}><td>{t.toString()} {principal === t.toString() ? "（我自己）": ""}</td></tr>
+                )
+              })
+            }
+          </tbody>
+        </table>
+
     </div>
   );
 }
