@@ -1,7 +1,11 @@
 #!/usr/bin/ic-repl
 
+//---------------SETUP---------------//
+
 identity default "./id1.pem";
 import canister = "rrkah-fqaaa-aaaaa-aaaaq-cai";
+
+//---------------Create Canister---------------//
+
 call canister.propose(variant {createCanister}, null, null);
-let proposal_id1 = _.id;
-call canister.approve(proposal_id1);
+call canister.approve(_.id);

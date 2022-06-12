@@ -149,6 +149,8 @@ function App() {
     eval( "set" + op.charAt(0).toUpperCase() + op.slice(1) + "(true)");
 
     try {
+      await sleep(1000 * 6);
+      
       let result = op === 'approveProposal'? await webapp.approve(parseInt(id)) : await webapp.refuse(parseInt(id));
     } catch (e) {
       console.log(e);
