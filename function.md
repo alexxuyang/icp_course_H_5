@@ -52,7 +52,7 @@ Canister板块的所有按钮操作，都实现了：
 
 ![principal](images/011.png)
 
-显示所有提议的列表，按照ID大小倒序显示丁丁的
+显示所有提议的列表，按照ID大小倒序显示的
 - 提议ID
 - 提议类型
     - createCanister：创建canister
