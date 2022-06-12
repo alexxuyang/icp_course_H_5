@@ -44,10 +44,11 @@ function App() {
   const [canisters, setCanisters] = useState([]);
   const [canistersM, setCanistersM] = useState([]);
   const [canistersStatus, setCanistersStatus] = useState([]);
-  const [principal, setPrincipal] = useState(null);
-  const [logined, setLogined] = useState(false);
   const [M, setM] = useState('');
   const [N, setN] = useState('');
+
+  const [principal, setPrincipal] = useState(null);
+  const [logined, setLogined] = useState(false);
 
   const [processing, setProcessing] = useState(false);
 
@@ -60,10 +61,11 @@ function App() {
   const [uninstallCode, setUninstallCode] = useState(false);
   const [addPermission, setAddPermission] = useState(false);
   const [removePermission, setRemovePermission] = useState(false);
+  const [opCanisterId, setOpCanisterId] = useState(null);
 
   const [approveProposal, setApproveProposal] = useState(false);
   const [refuseProposal, setRefuseProposal] = useState(false);
-  const [proposalId, setProposalId] = useState(null);  
+  const [proposalId, setProposalId] = useState(null);
 
   const [show, setShow] = useState(false);
   const handleClose = () => setShow(false);
@@ -149,7 +151,7 @@ function App() {
     eval( "set" + op.charAt(0).toUpperCase() + op.slice(1) + "(true)");
 
     try {
-      await sleep(1000 * 6);
+      await sleep(1000 * 3);
       
       let result = op === 'approveProposal'? await webapp.approve(parseInt(id)) : await webapp.refuse(parseInt(id));
     } catch (e) {
@@ -213,6 +215,10 @@ function App() {
 
     setProcessing(true);
 
+    if (op !== 'createCanister' && op != "addMember") {
+      setOpCanisterId(canister_id);
+    }
+
     eval( "set" + op.charAt(0).toUpperCase() + op.slice(1) + "(true)");
 
     let type = {};
@@ -227,6 +233,7 @@ function App() {
       console.log(e);
     } finally {
       setProcessing(false);
+      setOpCanisterId(null);
       eval( "set" + op.charAt(0).toUpperCase() + op.slice(1) + "(false)");
     }
   }
@@ -431,7 +438,7 @@ function App() {
                     <td>
                       <div>
                         <Button disabled={processing} variant="danger" onClick={handleCanisterAction.bind(this, t.toText(), "startCanister", null)}>
-                          { startCanister ?
+                          { startCanister && t.toText() == opCanisterId ?
                             <Spinner
                               as="span"
                               animation="grow"
@@ -444,7 +451,7 @@ function App() {
                           启
                         </Button>{' '}
                         <Button disabled={processing} variant="danger" onClick={handleCanisterAction.bind(this, t.toText(), "stopCanister", null)}>
-                          { stopCanister ?
+                          { stopCanister && t.toText() == opCanisterId ?
                             <Spinner
                               as="span"
                               animation="grow"
@@ -457,7 +464,7 @@ function App() {
                           停
                         </Button>{' '}
                         <Button disabled={processing} variant="danger" onClick={handleCanisterAction.bind(this, t.toText(), "deleteCanister", null)}>
-                          { deleteCanister ?
+                          { deleteCanister && t.toText() == opCanisterId ?
                             <Spinner
                               as="span"
                               animation="grow"
@@ -470,7 +477,7 @@ function App() {
                           删
                         </Button>{' '}
                         <Button disabled={processing} variant="warning" onClick={handleCodeAction.bind(this, t.toText(), "installCode")}>
-                          { installCode ?
+                          { installCode && t.toText() == opCanisterId ?
                             <Spinner
                               as="span"
                               animation="grow"
@@ -483,7 +490,7 @@ function App() {
                           装
                         </Button>{' '}
                         <Button disabled={processing} variant="warning" onClick={handleCodeAction.bind(this, t.toText(), "upgradeCode")}>
-                          { upgradeCode ?
+                          { upgradeCode && t.toText() == opCanisterId ?
                             <Spinner
                               as="span"
                               animation="grow"
@@ -496,7 +503,7 @@ function App() {
                           升
                         </Button>{' '}
                         <Button disabled={processing} variant="warning" onClick={handleCanisterAction.bind(this, t.toText(), "uninstallCode", null)}>
-                          { uninstallCode ?
+                          { uninstallCode && t.toText() == opCanisterId ?
                             <Spinner
                               as="span"
                               animation="grow"
@@ -509,7 +516,7 @@ function App() {
                           卸
                         </Button>{' '}
                         <Button disabled={processing} variant="secondary" onClick={handleCanisterAction.bind(this, t.toText(), "addPermission", null)}>
-                          { addPermission ?
+                          { addPermission && t.toText() == opCanisterId ?
                             <Spinner
                               as="span"
                               animation="grow"
@@ -522,7 +529,7 @@ function App() {
                           加
                         </Button>{' '}
                         <Button disabled={processing} variant="secondary" onClick={handleCanisterAction.bind(this, t.toText(), "removePermission", null)}>
-                          { removePermission ?
+                          { removePermission && t.toText() == opCanisterId ?
                             <Spinner
                               as="span"
                               animation="grow"
