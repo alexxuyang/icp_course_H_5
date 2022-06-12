@@ -1,6 +1,7 @@
 import type { Principal } from '@dfinity/principal';
 export type Canister = Principal;
-export type CanisterStatus = { 'stopped' : null } |
+export type CanisterStatus = { 'deleted' : null } |
+  { 'stopped' : null } |
   { 'stopping' : null } |
   { 'running' : null };
 export type Canister__1 = Principal;

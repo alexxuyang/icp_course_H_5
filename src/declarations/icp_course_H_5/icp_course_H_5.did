@@ -57,6 +57,7 @@ type ID = nat;
 type Canister__1 = principal;
 type CanisterStatus = 
  variant {
+   deleted;
    running;
    stopped;
    stopping;

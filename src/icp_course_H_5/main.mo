@@ -225,6 +225,8 @@ actor class cycle_manager(m: Nat, list: [Types.Owner]) = self {
           await ic.delete_canister({
             canister_id;
           });
+
+          canisterStatus.put(canister_id, #deleted);
         };
         case (#addMember) {
           let principal = Option.unwrap(proposal.canister_id);
@@ -246,12 +248,14 @@ actor class cycle_manager(m: Nat, list: [Types.Owner]) = self {
   system func heartbeat() : async () {
     let ic : IC.Self = actor("aaaaa-aa");
     for( canister_id in canisterStatus.keys()) {
-      try {
-        let result = await ic.canister_status({canister_id});
-        canisterStatus.put(canister_id, result.status);
-      } catch e {
-        Debug.print(debug_show(Error.message(e)));
-      }
+      if (canisterStatus.get(canister_id) != ?#deleted) {
+        try {
+          let result = await ic.canister_status({canister_id});
+          canisterStatus.put(canister_id, result.status);
+        } catch e {
+          Debug.print(debug_show(Error.message(e)));
+        };
+      };
     }
   };
 

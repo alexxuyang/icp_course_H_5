@@ -4,7 +4,7 @@
 
 identity default "./id1.pem";
 import DAO = "rrkah-fqaaa-aaaaa-aaaaq-cai";
-let member = opt principal "2wh6w-yfhox-qidxz-5zxer-hool6-tgyda-4xwtn-3b3ev-h2xss-wyvjx-3qe";
+let member = opt principal "sngub-d3idv-rdr26-clrtg-3uubc-xk2xi-sgcmg-zsy65-hmi5n-t4rbw-6ae";
 
 //---------------ADD MEMBER---------------//
 

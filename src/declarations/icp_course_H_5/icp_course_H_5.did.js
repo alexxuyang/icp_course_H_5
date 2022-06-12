@@ -29,6 +29,7 @@ export const idlFactory = ({ IDL }) => {
   const Canister__1 = IDL.Principal;
   const Owner__1 = IDL.Principal;
   const CanisterStatus = IDL.Variant({
+    'deleted' : IDL.Null,
     'stopped' : IDL.Null,
     'stopping' : IDL.Null,
     'running' : IDL.Null,

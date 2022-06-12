@@ -38,7 +38,7 @@ module {
 		// #removeMember;
 	};
 
-	public type CanisterStatus = { #stopped; #stopping; #running };
+	public type CanisterStatus = { #stopped; #stopping; #running; #deleted };
 
 	public func finish_proposer(p1: Proposal) : Proposal {
 		{
