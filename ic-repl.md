@@ -1,6 +1,6 @@
 由于牵涉很多自动化操作，我们要测试DAO管理工具并不容易
 
-好在我们有[ic-repl](https://github.com/chenyan2002/ic-repl)工作，可以自动执行测试脚本，切换principal身份，调用motoko合约，并做简单的assertion
+好在我们有[ic-repl](https://github.com/chenyan2002/ic-repl)工具，可以自动执行测试脚本，切换principal身份，调用motoko合约，并做简单的assertion
 
 ./cmd目录上，包括了：
 - 所有和ic-repl相关的脚本
