@@ -102,4 +102,4 @@ ic-repl ./01.create-install-start-call.sh
 其它几个脚本文件分别为：
 - [02.propose-addMember-approve-approve.sh](cmd/02.propose-addMember-approve-approve.sh)：添加新成员到管理员中，需要在代码中更新新成员的principal ID
 - [03.propose-createCanister-approve.sh](cmd/03.propose-createCanister-approve.sh)：新建一个“创建canister”提议，并批准它
-- [04.propose-installCanister-approve.sh](cmd/04.propose-installCanister-approve.sh)：新建一个“安装代码”提议，并批准它，需要在代码中目标更新canister ID
+- [04.propose-installCanister-approve.sh](cmd/04.propose-installCanister-approve.sh)：新建一个“安装代码”提议，并批准它，需要在代码中更新目标canister ID
